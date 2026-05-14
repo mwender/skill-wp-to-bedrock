@@ -13,7 +13,7 @@ Use this skill when a site in `/Users/mwender/webdev/laravel-valet/bedrock/` has
 ## Environment facts (confirmed)
 
 - **Valet TLD**: `.test` — all local URLs are `https://<slug>.test`
-- **DB pattern**: `wp_<slug>` where slug is the domain name without its TLD (e.g., `lewisburgwater.org` → `wp_lewisburgwater`)
+- **DB pattern**: `wp_<slug>` where slug is the domain name without its TLD (e.g., `example.com` → `wp_example`)
 - **DB credentials**: typically `root` / empty password / `127.0.0.1`
 - **auth.json**: lives at `/Users/mwender/webdev/laravel-valet/bedrock/auth.json` — must be copied to the site root (it is gitignored)
 - **Composer repos**: wpackagist.org, packages.wenmarkdigital.com/satispress/ (wenmark/*), connect.advancedcustomfields.com
@@ -22,7 +22,7 @@ Use this skill when a site in `/Users/mwender/webdev/laravel-valet/bedrock/` has
 
 ## Inputs required
 
-- The site directory name (e.g., `lewisburgwater.org`) — provided by the user
+- The site directory name (e.g., `example.com`) — provided by the user
 - Optionally: which plugins to manage via Composer vs. copy manually
 
 ---
@@ -35,9 +35,9 @@ Derive key variables from the site directory name:
 
 | Variable | Example | How to derive |
 |---|---|---|
-| `SITE_DIR` | `lewisburgwater.org` | Provided by user |
-| `SITE_SLUG` | `lewisburgwater` | Strip TLD from `SITE_DIR` |
-| `LOCAL_DOMAIN` | `lewisburgwater.test` | `<SITE_SLUG>.test` |
+| `SITE_DIR` | `example.com` | Provided by user |
+| `SITE_SLUG` | `example` | Strip TLD from `SITE_DIR` |
+| `LOCAL_DOMAIN` | `example.test` | `<SITE_SLUG>.test` |
 
 Read `public/wp-config.php` and extract:
 - `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_HOST`
@@ -292,7 +292,7 @@ If the site was previously linked from inside `public/`, there is a symlink in `
 valet links
 ```
 
-Look for the site name (e.g., `lewisburgwater`) in the output. If the target path ends in `.../public`, it must be remapped.
+Look for the site name (e.g., `example`) in the output. If the target path ends in `.../public`, it must be remapped.
 
 #### Step 2: Remap the link (if needed)
 
