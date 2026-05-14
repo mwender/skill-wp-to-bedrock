@@ -375,26 +375,34 @@ wp rewrite flush
 
 #### Step 1: Check for an existing Valet link
 
-If the site was previously linked from inside `public/`, there is a symlink in `~/.config/valet/Sites/` pointing to `public/` rather than the project root. Valet would serve the wrong directory.
+The preferred pattern is to link Valet from the **project root** (not from inside `public/` or `web/`). Valet's driver system handles the rest: the WordPress driver serves from `public/` if that subdirectory exists, and the Bedrock driver serves from `web/` once the conversion is complete — no relink needed between phases.
+
+Check the current state:
 
 ```bash
 # List all Valet links and their targets
 valet links
 ```
 
-Look for the site name (e.g., `example`) in the output. If the target path ends in `.../public`, it must be remapped.
+Look for the site name (e.g., `example`) in the output and note the target path:
+
+- **Target is the project root** (e.g., `.../bedrock/example.com`): no action needed — skip to Step 3.
+- **Target ends in `.../public` or `.../web`**: the link was created from inside a subdirectory. Remap it using Step 2.
+- **No link exists**: create one now using Step 2.
 
 #### Step 2: Remap the link (if needed)
 
-```bash
-# Unlink from inside public/
-cd public && valet unlink && cd ..
+`valet unlink` without arguments uses the current directory name as the link name — so do **not** `cd` into `public/` or `web/` to unlink. Always pass the site slug explicitly, which works from any directory:
 
-# Relink from the project root (Valet's WordPress driver will serve from web/)
+```bash
+# Unlink by name — works from any directory
+valet unlink <SITE_SLUG>
+
+# Relink from the project root
 valet link --secure <SITE_SLUG>
 ```
 
-If no link existed (the site was served via Valet's path-based watching), no action is needed — Valet already serves the project root, and the WordPress driver detects Bedrock via `web/wp-config.php`.
+Once linked from the project root, no further relinking is needed after the Bedrock conversion — the Bedrock driver auto-detects `web/wp-config.php`.
 
 #### Step 3: Restart Valet and test
 
