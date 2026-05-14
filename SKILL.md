@@ -376,6 +376,9 @@ web/app/updraft/
 sql/
 auth.json
 
+# Local work directory (scripts, context docs, scratch files)
+bin/
+
 # Old standard WP install (pre-migration)
 public/
 public-backup/
@@ -435,6 +438,105 @@ rm -rf public-backup/
 Both `public/` and `public-backup/` remain excluded from git at all times.
 
 Update `AGENTS.md` to reflect the new Bedrock structure. Refer to `/Users/mwender/webdev/laravel-valet/bedrock/nccagent.com/AGENTS.md` as a template.
+
+---
+
+### Phase 15 — Install sync-prod-to-local
+
+This phase sets up the `bin/` directory and clones the `sync-prod-to-local` script as a self-contained subfolder within it.
+
+#### Step 1: Create bin/ and clone the repo
+
+```bash
+mkdir -p bin
+git clone git@github.com:mwender/sync-prod-to-local.git bin/sync-prod-to-local
+```
+
+#### Step 2: Add SYNC_* vars to .env
+
+**PAUSE** — ask the user:
+
+> "Do you have the production SSH/server details for this site yet? If yes, provide them and I'll add the SYNC_* vars to .env. If not, I'll add placeholder values you can fill in later."
+
+Whether filled in or as placeholders, append this block to `.env`:
+
+```dotenv
+# --- WP Sync (prod -> local) ---
+SYNC_REMOTE_SSH_USER=
+SYNC_REMOTE_SSH_HOST=
+SYNC_REMOTE_SSH_PORT=22
+SYNC_REMOTE_HOST=
+SYNC_LOCAL_HOST=<LOCAL_DOMAIN>
+SYNC_REMOTE_WEB_DIR=
+SYNC_REMOTE_STAGE_DIR=~/files
+```
+
+#### Step 3: Write post-import.sh
+
+The hook lives at `bin/sync-prod-to-local/sync.d/post-import.sh`. Write it based on what is installed for this site.
+
+**Elementor (auto-detect):** If `wpackagist-plugin/elementor` or `wenmark/elementor-pro` is in `composer.json`, always include the Elementor URL replacement and CSS flush:
+
+```bash
+wp elementor replace_urls "https://$SYNC_REMOTE_HOST" "https://$SYNC_LOCAL_HOST"
+wp elementor flush_css
+```
+
+**Other post-import actions — PAUSE** and ask:
+
+Before asking, scan `composer.json`'s `require` block for plugins that are commonly undesirable in a local dev environment (e.g. server management, security hardening, email delivery, CDN/caching plugins). Build a numbered list from only those that are actually present. Then append generic options at the end.
+
+Example (adjust based on what is actually installed):
+
+> "Any other post-import actions needed?
+>
+> 1. Deactivate SpinupWP (`wp plugin deactivate spinupwp`) ← only if `wpackagist-plugin/spinupwp` is in composer.json
+> 2. Deactivate iThemes Security Pro (`wp plugin deactivate ithemes-security-pro`) ← only if `wenmark/ithemes-security-pro` is in composer.json
+> 3. Activate a local-dev plugin (`wp plugin activate <slug>`)
+> 4. Something else
+>
+> Reply with numbers and/or describe custom steps."
+
+Only include plugin-deactivation entries for plugins confirmed present in `composer.json`. Do not list hypothetical plugins.
+
+Assemble the confirmed actions into `bin/sync-prod-to-local/sync.d/post-import.sh`:
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+
+cd "$WEB_DIR"
+
+# Elementor URL replacement (included if Elementor is installed)
+echo "👉 [Elementor] Replacing https://$SYNC_REMOTE_HOST with https://$SYNC_LOCAL_HOST..."
+wp elementor replace_urls "https://$SYNC_REMOTE_HOST" "https://$SYNC_LOCAL_HOST"
+
+echo "👉 [Elementor] Flushing CSS..."
+wp elementor flush_css
+
+# Additional project-specific actions confirmed above
+# ...
+```
+
+Make the script executable:
+
+```bash
+chmod +x bin/sync-prod-to-local/sync.d/post-import.sh
+```
+
+#### Step 4: Usage
+
+From the project root:
+
+```bash
+bin/sync-prod-to-local/sync-prod-to-local
+```
+
+Or with `-y` to skip the confirmation prompt:
+
+```bash
+bin/sync-prod-to-local/sync-prod-to-local -y
+```
 
 ---
 
