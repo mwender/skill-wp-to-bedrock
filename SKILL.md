@@ -115,16 +115,27 @@ This installs the standard Bedrock structure:
    }
    ```
 
-3. Add to `require` — common base packages (adjust based on the plugin inventory):
-   ```json
-   "wpackagist-theme/hello-elementor": "^3",
-   "wpackagist-plugin/elementor": "^3",
-   "wenmark/elementor-pro": "^3",
-   "wpackagist-plugin/disable-emojis": "^1.7",
-   "wpackagist-plugin/wordpress-seo": "^26",
-   "wpackagist-plugin/updraftplus": "^1"
-   ```
-   Add other wpackagist-available plugins from the inventory. Ask the user if unclear.
+3. Resolve **every** plugin and theme from `public/wp-content/plugins/` and `public/wp-content/themes/` to a Composer package. All plugins and themes are managed via Composer — there is no fallback of copying files manually.
+
+   **Decision tree for each plugin/theme:**
+
+   | Source | Condition | Composer require string |
+   |---|---|---|
+   | wpackagist.org | Free plugin on WordPress.org | `wpackagist-plugin/<wp-slug>` |
+   | wpackagist.org | Free theme on WordPress.org | `wpackagist-theme/<wp-slug>` |
+   | wenmark/* (Satispress) | Premium plugin already in Satispress | `wenmark/<slug>` |
+   | GitHub VCS | Custom plugin with a GitHub repo | Add VCS repo entry + `wenderhost/<plugin>` |
+   | **UNKNOWN** | **Not found in any source yet** | **PAUSE — see below** |
+
+   **When a plugin is not yet available anywhere:**
+
+   Do not proceed past Phase 4 for that plugin. Instead, ask the user:
+
+   > "The plugin `<plugin-slug>` is not available on wpackagist.org or at packages.wenmarkdigital.com/satispress/. Please add it to your Satispress instance and return the `wenmark/<package-slug>` string so I can add it to composer.json."
+
+   Wait for the user to respond with the Satispress slug before continuing. Once received, add it to `require` as `"wenmark/<slug>": "*"` (or a specific version if provided).
+
+   Add all resolved packages to the `require` block before moving to Phase 5.
 
 4. Confirm the `extra.installer-paths` block targets `web/app/`:
    ```json
@@ -212,21 +223,7 @@ WordPress core is installed to `web/wp/` and Bedrock packages to `vendor/`. Conf
 
 ### Phase 9 — Migrate content
 
-#### Plugins not managed by Composer
-
-```bash
-cp -r public/wp-content/plugins/<plugin-slug>/ web/app/plugins/
-```
-
-Copy only plugins that are NOT already installed via Composer (i.e., not in `web/app/plugins/` after `composer install`).
-
-#### Custom/active themes not managed by Composer
-
-```bash
-cp -r public/wp-content/themes/<custom-theme>/ web/app/themes/
-```
-
-Skip themes installed by Composer (e.g., `hello-elementor`, `twentytwentyfour`).
+All plugins and themes are managed via Composer (resolved in Phase 4 and installed in Phase 8). Do not manually copy plugin or theme directories.
 
 #### MU-plugins (custom only)
 
