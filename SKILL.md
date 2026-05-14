@@ -137,7 +137,9 @@ This installs the standard Bedrock structure:
 
    Add all resolved packages to the `require` block before moving to Phase 5.
 
-4. Confirm the `extra.installer-paths` block targets `web/app/`:
+4. Always add `"lukasbesch/bedrock-plugin-disabler": "^1.5"` to `require`. This package reads the `DISABLED_PLUGINS` constant defined in `config/environments/development.php` (configured in Phase 9) and prevents those plugins from loading locally.
+
+5. Confirm the `extra.installer-paths` block targets `web/app/`:
    ```json
    "extra": {
      "installer-paths": {
@@ -221,7 +223,44 @@ WordPress core is installed to `web/wp/` and Bedrock packages to `vendor/`. Conf
 
 ---
 
-### Phase 9 — Migrate content
+### Phase 9 — Configure development plugin disabling
+
+`lukasbesch/bedrock-plugin-disabler` reads a `DISABLED_PLUGINS` constant defined in `config/environments/development.php` and silently skips loading those plugins when `WP_ENV === 'development'`. This prevents production-only services (email delivery, security hardening, server agents) from running or nagging locally.
+
+**Common candidates — cross-reference against what is actually installed for this site:**
+
+| Plugin | Main plugin file |
+|---|---|
+| SpinupWP | `spinupwp/spinupwp.php` |
+| iThemes Security Pro | `ithemes-security-pro/ithemes-security-pro.php` |
+| Limit Login Attempts Reloaded | `limit-login-attempts-reloaded/limit-login-attempts-reloaded.php` |
+| SMTP2GO | `smtp2go/smtp2go-wordpress-plugin.php` |
+| Yoast SEO Premium | `wordpress-seo-premium/wp-seo-premium.php` |
+
+**PAUSE** — before writing `development.php`, present a numbered list of candidates drawn from the plugins actually installed for this site, then ask:
+
+> "Which of these should be disabled in the development environment? Reply with the numbers, e.g. `1, 3`:
+>
+> 1. SpinupWP — `spinupwp/spinupwp.php`
+> 2. iThemes Security Pro — `ithemes-security-pro/ithemes-security-pro.php`
+> 3. SMTP2GO — `smtp2go/smtp2go-wordpress-plugin.php`
+> 4. Limit Login Attempts Reloaded — `limit-login-attempts-reloaded/limit-login-attempts-reloaded.php`
+> _(include only plugins that are actually installed for this site)_
+>
+> Any others not on this list?"
+
+Wait for the reply, then map the chosen numbers back to their plugin file paths and write the `DISABLED_PLUGINS` constant to `config/environments/development.php`, placed after the existing `Config::define('DISALLOW_FILE_MODS', false);` line:
+
+```php
+Config::define('DISABLED_PLUGINS', [
+    'spinupwp/spinupwp.php',
+    // ... other confirmed plugins
+]);
+```
+
+---
+
+### Phase 10 — Migrate content
 
 All plugins and themes are managed via Composer (resolved in Phase 4 and installed in Phase 8). Do not manually copy plugin or theme directories.
 
@@ -245,7 +284,7 @@ cp -r public/wp-content/uploads/. web/app/uploads/
 
 ---
 
-### Phase 10 — Update database URLs
+### Phase 11 — Update database URLs
 
 The database contains the old siteurl/home values (possibly the production domain or the old local URL). Update them to the new local Bedrock URL:
 
@@ -281,7 +320,7 @@ wp rewrite flush
 
 ---
 
-### Phase 11 — Remap Valet link and verify
+### Phase 12 — Remap Valet link and verify
 
 #### Step 1: Check for an existing Valet link
 
@@ -318,7 +357,7 @@ valet restart
 
 ---
 
-### Phase 12 — Set up .gitignore
+### Phase 13 — Set up .gitignore
 
 Replace or update `.gitignore` with the standard pattern for this environment:
 
@@ -368,9 +407,9 @@ Adjust the ignored themes list to reflect what is managed by Composer for this s
 
 ---
 
-### Phase 13 — Initialize git and cleanup
+### Phase 14 — Initialize git and cleanup
 
-The `.gitignore` set up in Phase 12 already excludes `public/` and `public-backup/`, so the old WP install will never be staged — regardless of whether it has been archived yet.
+The `.gitignore` set up in Phase 13 already excludes `public/` and `public-backup/`, so the old WP install will never be staged — regardless of whether it has been archived yet.
 
 ```bash
 # Touch gitkeep files for tracked-but-empty directories
