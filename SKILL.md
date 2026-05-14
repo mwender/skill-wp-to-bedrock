@@ -1,24 +1,36 @@
 ---
 name: wp-to-bedrock
-description: "Convert a standard WordPress installation (in public/) to a Roots/Bedrock framework setup for sites in /Users/mwender/webdev/laravel-valet/bedrock/."
-compatibility: "Targets sites at /Users/mwender/webdev/laravel-valet/bedrock/<site>/. Requires Composer 2.x, WP-CLI, and Laravel Valet (all confirmed available)."
+description: "Convert a standard WordPress installation (in public/) to a Roots/Bedrock framework setup for sites in ~/webdev/laravel-valet/bedrock/."
+compatibility: "Targets sites at ~/webdev/laravel-valet/bedrock/<site>/. Requires Composer 2.x, WP-CLI, and Laravel Valet (all confirmed available)."
 ---
 
 # WP to Bedrock Migration
 
 ## When to use
 
-Use this skill when a site in `/Users/mwender/webdev/laravel-valet/bedrock/` has only a `public/` directory containing a standard WordPress installation and the goal is to convert it to a Roots/Bedrock structure.
+Use this skill when a site under your local Bedrock directory has only a `public/` directory containing a standard WordPress installation and the goal is to convert it to a Roots/Bedrock structure.
 
 ## Environment facts (confirmed)
 
 - **Valet TLD**: `.test` — all local URLs are `https://<slug>.test`
 - **DB pattern**: `wp_<slug>` where slug is the domain name without its TLD (e.g., `example.com` → `wp_example`)
 - **DB credentials**: typically `root` / empty password / `127.0.0.1`
-- **auth.json**: lives at `/Users/mwender/webdev/laravel-valet/bedrock/auth.json` — must be copied to the site root (it is gitignored)
+- **auth.json**: lives one level above the site directory (e.g., `~/webdev/laravel-valet/bedrock/auth.json`) — must be copied to the site root (it is gitignored)
 - **Composer repos**: wpackagist.org, packages.wenmarkdigital.com/satispress/ (wenmark/*), connect.advancedcustomfields.com
 - **WP-CLI path**: runs from project root; `wp-cli.yml` must point `path: web/wp`, `server.docroot: web`
 - **Valet + Bedrock**: Valet's built-in WordPress driver detects a Bedrock site via `web/wp-config.php` and serves from `web/` automatically — no custom driver needed
+
+## Adapting this skill to a different environment
+
+This skill was written for a specific local setup. If you are using it on a different machine, review and update these before running:
+
+| Setting | Where it appears | What to change |
+|---|---|---|
+| Bedrock parent directory | Phase 0, Phase 5 | Replace `~/webdev/laravel-valet/bedrock/` with your own path |
+| `auth.json` location | Phase 0, Phase 5 | Update to wherever your shared `auth.json` lives |
+| Satispress URL | Phase 4, Environment facts | Replace `packages.wenmarkdigital.com/satispress/` with your own Satispress host |
+| Satispress namespace | Phase 4 | Replace `wenmark/*` with your own Satispress package namespace |
+| Valet TLD | Phase 6, Environment facts | Change `.test` if your Valet uses a different TLD |
 
 ## Inputs required
 
@@ -28,6 +40,45 @@ Use this skill when a site in `/Users/mwender/webdev/laravel-valet/bedrock/` has
 ---
 
 ## Procedure
+
+### Phase 0 — Pre-flight checks
+
+Before touching anything, verify all prerequisites. If any check fails, stop and report clearly — do not proceed.
+
+```bash
+# 1. Confirm the site directory exists and contains a standard WP install
+ls <SITE_DIR>/public/wp-config.php
+
+# 2. Confirm auth.json is present one level above the site directory
+ls "$(dirname "$(pwd)")/auth.json"   # or the known shared location
+
+# 3. Confirm Composer is available
+composer --version
+
+# 4. Confirm WP-CLI is available
+wp --info
+
+# 5. Confirm Valet is running
+valet status
+
+# 6. Confirm the local database exists (or can be created)
+mysql -u root -e "SHOW DATABASES LIKE 'wp_<SITE_SLUG>';"
+```
+
+**Pass criteria:**
+
+| Check | Pass | Fail — stop and report |
+|---|---|---|
+| `public/wp-config.php` exists | File found | Missing — not a standard WP install |
+| `auth.json` present | File found | Ask user to confirm location |
+| Composer | Any 2.x version | Not found or version < 2 |
+| WP-CLI | Any version | Not found |
+| Valet | Running | Start with `valet start` |
+| DB exists | Database listed | Offer to create: `wp db create --path=public` |
+
+If all checks pass, report a summary and proceed to Phase 1.
+
+---
 
 ### Phase 1 — Gather site information
 
