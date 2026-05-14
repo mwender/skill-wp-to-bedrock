@@ -284,17 +284,40 @@ wp rewrite flush
 
 ---
 
-### Phase 11 — Verify
+### Phase 11 — Remap Valet link and verify
+
+#### Step 1: Check for an existing Valet link
+
+If the site was previously linked from inside `public/`, there is a symlink in `~/.config/valet/Sites/` pointing to `public/` rather than the project root. Valet would serve the wrong directory.
+
+```bash
+# List all Valet links and their targets
+valet links
+```
+
+Look for the site name (e.g., `lewisburgwater`) in the output. If the target path ends in `.../public`, it must be remapped.
+
+#### Step 2: Remap the link (if needed)
+
+```bash
+# Unlink from inside public/
+cd public && valet unlink && cd ..
+
+# Relink from the project root (Valet's WordPress driver will serve from web/)
+valet link --secure <SITE_SLUG>
+```
+
+If no link existed (the site was served via Valet's path-based watching), no action is needed — Valet already serves the project root, and the WordPress driver detects Bedrock via `web/wp-config.php`.
+
+#### Step 3: Restart Valet and test
+
+```bash
+valet restart
+```
 
 1. Visit `https://<LOCAL_DOMAIN>` in a browser — site should load
 2. Visit `https://<LOCAL_DOMAIN>/wp/wp-admin/` — admin should load
 3. Check for errors: `tail -f web/app/debug.log` (if WP_DEBUG_LOG=true)
-
-If Valet is not routing the site:
-```bash
-valet restart
-```
-Valet's WordPress driver auto-detects Bedrock via `web/wp-config.php` — no configuration needed beyond `valet restart`.
 
 ---
 
@@ -316,6 +339,10 @@ web/app/cache/*
 web/app/updraft/
 sql/
 auth.json
+
+# Old standard WP install (pre-migration)
+public/
+public-backup/
 
 # WordPress
 web/wp
@@ -346,26 +373,32 @@ Adjust the ignored themes list to reflect what is managed by Composer for this s
 
 ### Phase 13 — Initialize git and cleanup
 
+The `.gitignore` set up in Phase 12 already excludes `public/` and `public-backup/`, so the old WP install will never be staged — regardless of whether it has been archived yet.
+
 ```bash
 # Touch gitkeep files for tracked-but-empty directories
 touch web/app/plugins/.gitkeep
 touch web/app/uploads/.gitkeep
 
-# Initialize git
+# Initialize git and commit — public/ is excluded by .gitignore
 git init
 git add -A
 git commit -m "Initial Bedrock setup migrated from public/"
 ```
 
-Once the site is confirmed working, archive the old public directory:
+After confirming the commit looks clean (`git show --stat`), archive or remove the old WP install:
 
 ```bash
+# Safe: archive first, delete after further testing
 mv public/ public-backup/
-# Or, after thorough testing:
-rm -rf public/
+
+# Or, once fully verified:
+rm -rf public-backup/
 ```
 
-Update `AGENTS.md` to reflect the Bedrock structure. Refer to `/Users/mwender/webdev/laravel-valet/bedrock/nccagent.com/AGENTS.md` as a template for what to include.
+Both `public/` and `public-backup/` remain excluded from git at all times.
+
+Update `AGENTS.md` to reflect the new Bedrock structure. Refer to `/Users/mwender/webdev/laravel-valet/bedrock/nccagent.com/AGENTS.md` as a template.
 
 ---
 
