@@ -22,7 +22,9 @@ When invoked with `/wp-to-bedrock <site-directory>`, it walks through a 15-phase
 
 ## Environment assumptions
 
+- Runs on the Mac Mini, the home for Bedrock conversions. The MacBook still has the older `~/webdev/laravel-valet/bedrock/` layout, so the skill's paths don't work there.
 - Laravel Valet 4.x with `.test` TLD
-- Sites live under `~/webdev/laravel-valet/bedrock/`
-- Shared `auth.json` at `~/webdev/laravel-valet/bedrock/auth.json`
+- Sites live under `~/webdev/bedrock/`
+- Shared `auth.json` at `~/webdev/bedrock/auth.json`
+- Premium plugins missing from Satispress are added with the scripts in `~/Projects/satispress`
 - Composer 2.x and WP-CLI available in `$PATH`

@@ -1,7 +1,7 @@
 ---
 name: wp-to-bedrock
-description: "Convert a standard WordPress installation (in public/) to a Roots/Bedrock framework setup for sites in ~/webdev/laravel-valet/bedrock/."
-compatibility: "Targets sites at ~/webdev/laravel-valet/bedrock/<site>/. Requires Composer 2.x, WP-CLI, and Laravel Valet (all confirmed available)."
+description: "Convert a standard WordPress installation (in public/) to a Roots/Bedrock framework setup for sites in ~/webdev/bedrock/ on the Mac Mini."
+compatibility: "Runs on the Mac Mini, against sites at ~/webdev/bedrock/<site>/. Requires Composer 2.x, WP-CLI, and Laravel Valet (all confirmed available there)."
 ---
 
 # WP to Bedrock Migration
@@ -10,12 +10,14 @@ compatibility: "Targets sites at ~/webdev/laravel-valet/bedrock/<site>/. Require
 
 Use this skill when a site under your local Bedrock directory has only a `public/` directory containing a standard WordPress installation and the goal is to convert it to a Roots/Bedrock structure.
 
+**Conversions happen on the Mac Mini.** It's the home for Bedrock site copies, at `~/webdev/bedrock/<site>/`, and every path in this skill is a Mini path. The MacBook still has the older `~/webdev/laravel-valet/bedrock/` layout and no shared `auth.json` at `~/webdev/bedrock/`, so the paths here don't work there. If this skill is invoked on the MacBook, stop and suggest running the conversion from a Mac Mini session instead.
+
 ## Environment facts (confirmed)
 
 - **Valet TLD**: `.test` — all local URLs are `https://<slug>.test`
 - **DB pattern**: `wp_<slug>` where slug is the domain name without its TLD (e.g., `example.com` → `wp_example`)
 - **DB credentials**: typically `root` / empty password / `127.0.0.1`
-- **auth.json**: lives one level above the site directory (e.g., `~/webdev/laravel-valet/bedrock/auth.json`) — must be copied to the site root (it is gitignored)
+- **auth.json**: a shared copy lives one level above the site directories, at `~/webdev/bedrock/auth.json` (mode 600) — copy it to the site root (it is gitignored). It holds Composer credentials for Satispress, ACF, Gravity Forms, Gravity Wiz and Yoast.
 - **Composer repos**: wpackagist.org, packages.wenmarkdigital.com/satispress/ (wenmark/*), connect.advancedcustomfields.com
 - **WP-CLI path**: runs from project root; `wp-cli.yml` must point `path: web/wp`, `server.docroot: web`
 - **Valet + Bedrock**: Valet's built-in WordPress driver detects a Bedrock site via `web/wp-config.php` and serves from `web/` automatically — no custom driver needed
@@ -26,7 +28,7 @@ This skill was written for a specific local setup. If you are using it on a diff
 
 | Setting | Where it appears | What to change |
 |---|---|---|
-| Bedrock parent directory | Phase 0, Phase 5 | Replace `~/webdev/laravel-valet/bedrock/` with your own path |
+| Bedrock parent directory | Phase 0, Phase 5 | Replace `~/webdev/bedrock/` with your own path |
 | `auth.json` location | Phase 0, Phase 5 | Update to wherever your shared `auth.json` lives |
 | Satispress URL | Phase 4, Environment facts | Replace `packages.wenmarkdigital.com/satispress/` with your own Satispress host |
 | Satispress namespace | Phase 4 | Replace `wenmark/*` with your own Satispress package namespace |
@@ -49,8 +51,8 @@ Before touching anything, verify all prerequisites. If any check fails, stop and
 # 1. Confirm the site directory exists and contains a standard WP install
 ls <SITE_DIR>/public/wp-config.php
 
-# 2. Confirm auth.json is present one level above the site directory
-ls "$(dirname "$(pwd)")/auth.json"   # or the known shared location
+# 2. Confirm this is the Mac Mini's Bedrock folder and the shared auth.json is there
+ls ~/webdev/bedrock/auth.json
 
 # 3. Confirm Composer is available
 composer --version
@@ -70,7 +72,7 @@ mysql -u root -e "SHOW DATABASES LIKE 'wp_<SITE_SLUG>';"
 | Check | Pass | Fail — stop and report |
 |---|---|---|
 | `public/wp-config.php` exists | File found | Missing — not a standard WP install |
-| `auth.json` present | File found | Ask user to confirm location |
+| `auth.json` present | File found | Missing — on the MacBook, stop (see "When to use"); on the Mini, copy it from an existing site such as `~/webdev/bedrock/orra.org/auth.json` |
 | Composer | Any 2.x version | Not found or version < 2 |
 | WP-CLI | Any version | Not found |
 | Valet | Running | Start with `valet start` |
@@ -125,7 +127,7 @@ Run `composer create-project` in a temp directory, then move the scaffold to the
 
 ```bash
 composer create-project roots/bedrock /tmp/bedrock-scaffold --no-interaction
-rsync -av --exclude='.git' /tmp/bedrock-scaffold/ /Users/mwender/webdev/laravel-valet/bedrock/<SITE_DIR>/
+rsync -av --exclude='.git' /tmp/bedrock-scaffold/ ~/webdev/bedrock/<SITE_DIR>/
 rm -rf /tmp/bedrock-scaffold
 ```
 
@@ -174,17 +176,20 @@ This installs the standard Bedrock structure:
    |---|---|---|
    | wpackagist.org | Free plugin on WordPress.org | `wpackagist-plugin/<wp-slug>` |
    | wpackagist.org | Free theme on WordPress.org | `wpackagist-theme/<wp-slug>` |
-   | wenmark/* (Satispress) | Premium plugin already in Satispress | `wenmark/<slug>` |
+   | wenmark/* (Satispress) | Premium plugin already in Satispress (check with `~/Projects/satispress/bin/list <slug>`) | `wenmark/<slug>` |
    | GitHub VCS | Custom plugin with a GitHub repo | Add VCS repo entry + `wenderhost/<plugin>` |
    | **UNKNOWN** | **Not found in any source yet** | **PAUSE — see below** |
 
    **When a plugin is not yet available anywhere:**
 
-   Do not proceed past Phase 4 for that plugin. Instead, ask the user:
+   Do not proceed past Phase 4 for that plugin. A premium plugin goes onto Satispress with the scripts in `~/Projects/satispress`; read that repo's `AGENTS.md` first.
 
-   > "The plugin `<plugin-slug>` is not available on wpackagist.org or at packages.wenmarkdigital.com/satispress/. Please add it to your Satispress instance and return the `wenmark/<package-slug>` string so I can add it to composer.json."
+   1. Tell the user which plugins are missing and where the files would come from: the vendor's download (preferred, as it's the latest version) or the site's own copy in `public/wp-content/plugins/<slug>/`. Adding a plugin changes the shared packages site, so wait for the user's go-ahead.
+   2. Run `~/Projects/satispress/bin/add-plugin <zip|folder>`. It installs the plugin on the packages site (inactive), archives it, clears the page cache and checks that `packages.json` lists it.
+   3. Add it to `require` as `"wenmark/<slug>": "^<version>"`, using the version the script reports.
+   4. Add the plugin to the inventory in `~/Projects/satispress/AGENTS.md`, then commit and push that repo.
 
-   Wait for the user to respond with the Satispress slug before continuing. Once received, add it to `require` as `"wenmark/<slug>": "*"` (or a specific version if provided).
+   A custom plugin with no vendor (the user's own code) doesn't belong on Satispress: ask whether it has a GitHub repo for the VCS route.
 
    Add all resolved packages to the `require` block before moving to Phase 5.
 
@@ -209,7 +214,7 @@ This installs the standard Bedrock structure:
 Copy the shared auth.json from the bedrock parent directory:
 
 ```bash
-cp /Users/mwender/webdev/laravel-valet/bedrock/auth.json .
+cp ~/webdev/bedrock/auth.json .
 ```
 
 (auth.json is gitignored — do not symlink, as that can cause path issues with Composer.)
@@ -496,7 +501,7 @@ rm -rf public-backup/
 
 Both `public/` and `public-backup/` remain excluded from git at all times.
 
-Update `AGENTS.md` to reflect the new Bedrock structure. Refer to `/Users/mwender/webdev/laravel-valet/bedrock/nccagent.com/AGENTS.md` as a template.
+Update `AGENTS.md` to reflect the new Bedrock structure. Refer to `~/webdev/bedrock/orra.org/AGENTS.md` as a template: copy its structure (snapshot, repo map, local/production facts, deploy notes), not its site-specific detail.
 
 ---
 
