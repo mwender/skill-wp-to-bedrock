@@ -18,7 +18,7 @@ Use this skill when a site under your local Bedrock directory has only a `public
 - **DB pattern**: `wp_<slug>` where slug is the domain name without its TLD (e.g., `example.com` → `wp_example`)
 - **DB credentials**: typically `root` / empty password / `127.0.0.1`
 - **auth.json**: a shared copy lives one level above the site directories, at `~/webdev/bedrock/auth.json` (mode 600) — copy it to the site root (it is gitignored). It holds Composer credentials for Satispress, ACF, Gravity Forms, Gravity Wiz and Yoast.
-- **Composer repos**: wpackagist.org, packages.wenmarkdigital.com/satispress/ (wenmark/*), connect.advancedcustomfields.com
+- **Composer repos**: repo.wp-packages.org (WP Packages: `wp-plugin/*`, `wp-theme/*`), packages.wenmarkdigital.com/satispress/ (`wenmark/*`), connect.advancedcustomfields.com. WPackagist (`wpackagist.org`, `wpackagist-plugin/*`) is **legacy**: never use it for a new site, and see "Legacy: sites still on WPackagist" below for upgrading existing ones.
 - **WP-CLI path**: runs from project root; `wp-cli.yml` must point `path: web/wp`, `server.docroot: web`
 - **Valet + Bedrock**: Valet's built-in WordPress driver detects a Bedrock site via `web/wp-config.php` and serves from `web/` automatically — no custom driver needed
 
@@ -106,7 +106,7 @@ ls public/wp-content/themes/
 ls public/wp-content/mu-plugins/
 ```
 
-Identify which plugins are likely available via wpackagist (anything with a standard WordPress.org slug). Custom or premium plugins will be copied manually.
+Identify which plugins are likely available via WP Packages (anything with a standard WordPress.org slug). Custom or premium plugins will be copied manually.
 
 ---
 
@@ -151,17 +151,17 @@ This installs the standard Bedrock structure:
 2. Replace the default `repositories` block with the standard set:
    ```json
    "repositories": {
-     "0": {
+     "wp-packages": {
        "type": "composer",
-       "url": "https://wpackagist.org",
-       "only": ["wpackagist-plugin/*", "wpackagist-theme/*"]
+       "url": "https://repo.wp-packages.org",
+       "only": ["wp-plugin/*", "wp-theme/*"]
      },
-     "1": {
+     "satispress": {
        "type": "composer",
        "url": "https://packages.wenmarkdigital.com/satispress/",
        "only": ["wenmark/*"]
      },
-     "2": {
+     "acf": {
        "type": "composer",
        "url": "https://connect.advancedcustomfields.com"
      }
@@ -174,8 +174,8 @@ This installs the standard Bedrock structure:
 
    | Source | Condition | Composer require string |
    |---|---|---|
-   | wpackagist.org | Free plugin on WordPress.org | `wpackagist-plugin/<wp-slug>` |
-   | wpackagist.org | Free theme on WordPress.org | `wpackagist-theme/<wp-slug>` |
+   | WP Packages | Free plugin on WordPress.org | `wp-plugin/<wp-slug>` |
+   | WP Packages | Free theme on WordPress.org | `wp-theme/<wp-slug>` |
    | wenmark/* (Satispress) | Premium plugin already in Satispress (check with `~/Projects/satispress/bin/list <slug>`) | `wenmark/<slug>` |
    | GitHub VCS | Custom plugin with a GitHub repo | Add VCS repo entry + `wenderhost/<plugin>` |
    | **UNKNOWN** | **Not found in any source yet** | **PAUSE — see below** |
@@ -539,7 +539,7 @@ SYNC_REMOTE_STAGE_DIR=~/files
 
 The hook lives at `bin/sync-prod-to-local/sync.d/post-import.sh`. Write it based on what is installed for this site.
 
-**Elementor (auto-detect):** If `wpackagist-plugin/elementor` or `wenmark/elementor-pro` is in `composer.json`, always include the Elementor URL replacement and CSS flush:
+**Elementor (auto-detect):** If `wp-plugin/elementor` (or the legacy `wpackagist-plugin/elementor`) or `wenmark/elementor-pro` is in `composer.json`, always include the Elementor URL replacement and CSS flush:
 
 ```bash
 wp elementor replace_urls "https://$SYNC_REMOTE_HOST" "https://$SYNC_LOCAL_HOST"
@@ -554,7 +554,7 @@ Example (adjust based on what is actually installed):
 
 > "Any other post-import actions needed?
 >
-> 1. Deactivate SpinupWP (`wp plugin deactivate spinupwp`) ← only if `wpackagist-plugin/spinupwp` is in composer.json
+> 1. Deactivate SpinupWP (`wp plugin deactivate spinupwp`) ← only if `wp-plugin/spinupwp` (or the legacy `wpackagist-plugin/spinupwp`) is in composer.json
 > 2. Deactivate iThemes Security Pro (`wp plugin deactivate ithemes-security-pro`) ← only if `wenmark/ithemes-security-pro` is in composer.json
 > 3. Activate a local-dev plugin (`wp plugin activate <slug>`)
 > 4. Something else
@@ -601,6 +601,26 @@ Or with `-y` to skip the confirmation prompt:
 ```bash
 bin/sync-prod-to-local/sync-prod-to-local -y
 ```
+
+---
+
+## Legacy: sites still on WPackagist
+
+WPackagist (`https://wpackagist.org`, packages named `wpackagist-plugin/<slug>` and `wpackagist-theme/<slug>`) is the legacy source for WordPress.org plugins and themes. WP Packages (`https://repo.wp-packages.org`, run by Roots, packages named `wp-plugin/<slug>` and `wp-theme/<slug>`) replaces it. Its lock files are reproducible, and it drops plugins WordPress.org has closed. wenmarkdigital.com (2026-10-19) and alwaysaspire.com (2026-11-06) already use it. On the Mac Mini, caseantiques.com, orra.org and pickupmydonation.com were still on WPackagist as of 2026-11-10, and Bedrock projects brought over from the MacBook probably are too.
+
+**Whenever you open or work in a Bedrock site whose `composer.json` mentions `wpackagist`, tell Michael it's on the legacy source and offer to move it. Don't move it unasked, and don't fold it into an unrelated change.** If he agrees, the upgrade is its own branch and commit:
+
+1. Create a branch. On a SpinupWP Push-to-Deploy site, merging to `main` deploys the change.
+2. Run `~/.claude/skills/wp-to-bedrock/scripts/wpackagist-to-wp-packages.sh --dry-run` from the site root. It lists the WPackagist packages and checks that WP Packages offers each one at its locked version.
+3. For any package it reports as missing, ask Michael which way to go:
+   - **A release that was never tagged in SVN** (WordPress.org shows a version WP Packages lacks): take the latest tagged version with `--use wp-plugin/<slug>:<version>`, usually a patch release behind.
+   - **Trunk-only** (no tagged releases at all, only `dev-trunk`): WP Packages serves it only from SVN, so every machine that runs Composer, production included, would need `svn`. Prefer to replace the plugin, put it in Satispress (`~/Projects/satispress/bin/add-plugin`), or drop it. wenmarkdigital.com moved Instant CSS's styles into a child theme.
+   - **Closed on WordPress.org** (not on WP Packages at all): replace it, or put it in Satispress.
+4. Run the script without `--dry-run`, adding any `--use` flags. It renames the packages, swaps the repository, and locks every package at its previous version, so the switch upgrades nothing. It checks the result and restores both files if anything fails. If a private GitHub VCS repo needs auth, it borrows `gh auth token` for that one run.
+5. Run `composer install`, compare `wp plugin list` and `wp theme list` with what they showed before, and load the site. The plugin folder names don't change, so the database needs nothing.
+6. Grep the repo for leftover `wpackagist` (in `bin/` scripts, `post-import.sh`, AGENTS.md), update the site's AGENTS.md, and commit `composer.json`, `composer.lock` and the docs together.
+
+Plugin updates are a separate step afterwards (`composer update 'wp-plugin/*'`), so a problem can be traced to either the source switch or an update, not both.
 
 ---
 

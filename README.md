@@ -9,7 +9,7 @@ When invoked with `/wp-to-bedrock <site-directory>`, it walks through a 15-phase
 ### What gets set up
 
 - **Bedrock scaffold** — `web/` docroot, `web/wp/` for WordPress core, `web/app/` for plugins/themes/uploads
-- **Composer** — all plugins and themes managed via wpackagist, a private Satispress instance, or GitHub VCS repos; no manually copied plugin files
+- **Composer** — all plugins and themes managed via [WP Packages](https://wp-packages.org) (`wp-plugin/*`, `wp-theme/*`), a private Satispress instance, or GitHub VCS repos; no manually copied plugin files
 - **`.env`** — database credentials, WP salts, and environment URLs extracted from the original `wp-config.php`
 - **Plugin disabling by environment** — uses [`lukasbesch/bedrock-plugin-disabler`](https://github.com/lukasbesch/bedrock-plugin-disabler) to disable server/security plugins that shouldn't run locally
 - **Valet link remapping** — detects and fixes any existing Valet link pointing at `public/` so the site serves correctly from `web/`
@@ -27,4 +27,8 @@ When invoked with `/wp-to-bedrock <site-directory>`, it walks through a 15-phase
 - Sites live under `~/webdev/bedrock/`
 - Shared `auth.json` at `~/webdev/bedrock/auth.json`
 - Premium plugins missing from Satispress are added with the scripts in `~/Projects/satispress`
+
+## Legacy WPackagist sites
+
+WPackagist (`wpackagist-plugin/*`) is the legacy source. `scripts/wpackagist-to-wp-packages.sh` moves an existing Bedrock site to WP Packages at the same plugin versions: run it with `--dry-run` first, from the site root. The procedure is in SKILL.md under "Legacy: sites still on WPackagist".
 - Composer 2.x and WP-CLI available in `$PATH`
