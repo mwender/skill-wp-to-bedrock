@@ -606,7 +606,7 @@ bin/sync-prod-to-local/sync-prod-to-local -y
 
 ## Legacy: sites still on WPackagist
 
-WPackagist (`https://wpackagist.org`, packages named `wpackagist-plugin/<slug>` and `wpackagist-theme/<slug>`) is the legacy source for WordPress.org plugins and themes. WP Packages (`https://repo.wp-packages.org`, run by Roots, packages named `wp-plugin/<slug>` and `wp-theme/<slug>`) replaces it. Its lock files are reproducible, and it drops plugins WordPress.org has closed. wenmarkdigital.com (2026-10-19) and alwaysaspire.com (2026-11-06) already use it. On the Mac Mini, caseantiques.com, orra.org and pickupmydonation.com were still on WPackagist as of 2026-11-10, and Bedrock projects brought over from the MacBook probably are too.
+WPackagist (`https://wpackagist.org`, packages named `wpackagist-plugin/<slug>` and `wpackagist-theme/<slug>`) is the legacy source for WordPress.org plugins and themes. WP Packages (`https://repo.wp-packages.org`, run by Roots, packages named `wp-plugin/<slug>` and `wp-theme/<slug>`) replaces it. Its lock files are reproducible, and it drops plugins WordPress.org has closed. wenmarkdigital.com (2026-10-19), alwaysaspire.com (2026-11-06) and orra.org (2026-11-12) already use it. On the Mac Mini, caseantiques.com and pickupmydonation.com were still on WPackagist as of 2026-11-10, and Bedrock projects brought over from the MacBook probably are too.
 
 **Whenever you open or work in a Bedrock site whose `composer.json` mentions `wpackagist`, tell Michael it's on the legacy source and offer to move it. Don't move it unasked, and don't fold it into an unrelated change.** If he agrees, the upgrade is its own branch and commit:
 
